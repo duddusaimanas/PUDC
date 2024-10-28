@@ -1,0 +1,68 @@
+services:
+  pg-db:
+    image: ankane/pgvector:latest
+    container_name: pg-db
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 19992000
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - conn
+
+  ollama-ai:
+    image: ollama/ollama:latest
+    volumes:
+      - ./ollama/ollama:/root/.ollama
+      - ./entrypoint.sh:/entrypoint.sh
+    container_name: ollama-ai
+    entrypoint: [ "/usr/bin/bash", "/entrypoint.sh" ]
+    ports:
+      - "11434:11434"
+    networks:
+      - conn
+
+  springboot-app:
+    image: user-management:0.0.1-SNAPSHOT
+    container_name: user-management
+    environment:
+      JAVA_OPTS: --add-opens=java.management/sun.management=ALL-UNNAMED
+      SPRING_DATASOURCE_URL: jdbc:postgresql://pg-db:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 19992000
+      SPRING_JPA_DATABASE: postgresql
+      SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION: true
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+      SPRING_JPA_PROPERTIES_HIBERNATE_BOOT_ALLOW_JDBC_METADATA_ACCESS: false
+      SPRING_AI_OLLAMA_BASE_URL: http://ollama-ai:11434/
+      SPRING_AI_OLLAMA_CHAT_MODEL: llama3.2
+      SPRING_THREADS_VIRTUAL_ENABLED: true
+      LOCAL_CRAWL_DIRECTORY: "/tmp/crawl/data/"
+      SPRING_AI_OLLAMA_EMBEDDING_ENABLED: true
+      SPRING_AI_OLLAMA_EMBEDDING_OPTIONS_MODEL: all-minilm
+      SPRING_AI_VECTORSTORE_PGVECTOR_INDEX_TYPE: HNSW
+      SPRING_AI_VECTORSTORE_PGVECTOR_DISTANCE_TYPE: COSINE_DISTANCE
+      SPRING_AI_VECTORSTORE_PGVECTOR_DIMENSIONS: 384
+      # SPRING_AI_VECTORSTORE_PGVECTOR_INITIALIZE_SCHEMA: true
+      # SPRING_AI_VECTORSTORE_PGVECTOR_REMOVE_EXISTING_VECTOR_STORE_TABLE: true
+    ports:
+      - "8080:8080"
+    depends_on:
+      pg-db:
+        condition: service_healthy
+        restart: true
+      ollama-ai:
+        condition: service_started
+    volumes:
+      - ./src/main/resources/import.sql:/docker-entrypoint-initdb.d/import.sql
+    networks:
+      - conn
+
+networks:
+  conn:
