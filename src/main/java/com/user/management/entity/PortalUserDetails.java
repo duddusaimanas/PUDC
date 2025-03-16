@@ -4,8 +4,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-import javax.crypto.SecretKey;
-
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -36,11 +34,8 @@ public class PortalUserDetails implements UserDetails {
     private String username;
     private String password;
     private String name;
-    private SecretKey secretKey;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "varchar(255) default 'ABSENT'")
-    private UserStatus status;
+    private List<UUID> conversationIds;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "varchar(255) default 'USER'")
@@ -61,8 +56,6 @@ public class PortalUserDetails implements UserDetails {
             sb.append("username=").append(this.username).append(", ");
         if (this.name != null)
             sb.append("name=").append(this.name).append(", ");
-        if (this.status != null)
-            sb.append("status=").append(this.status).append(", ");
         if (this.permissions != null)
             sb.append("permissions=").append(this.permissions).append(", ");
         if (sb.length() > init)

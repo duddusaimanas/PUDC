@@ -18,27 +18,37 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.user.management.config.CrawlerService;
 import com.user.management.config.WebPageLoader;
+import com.user.management.control.ChatRepostory;
+import com.user.management.entity.ChatDetails;
 import com.user.management.entity.LocalDocument;
 import com.user.management.entity.LocalSearchRequest;
+import com.user.management.entity.PortalUserDetails;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/ai")
 @Slf4j
 public class ChatController {
 
         private final ChatClient chatClient;
+        private final ChatRepostory chatRepostory;
         private final VectorStore vectorStore;
         private final CrawlerService crawlerService;
         private final WebPageLoader webPageLoader;
@@ -60,7 +70,7 @@ public class ChatController {
         private static final String MEMORY_RESPONSE_SIZE = "chat_memory_response_size";
 
         public ChatController(ChatClient.Builder chatClientBuilder, VectorStore vectorStore,
-                        CrawlerService crawlerService, WebPageLoader webPageLoader,
+                        CrawlerService crawlerService, WebPageLoader webPageLoader, ChatRepostory chatRepostory,
                         @Value("classpath:templates/PromptVariationsSystemTemplate.ST") Resource promptVariationsSystemTemplate) {
                 this.chatClient = chatClientBuilder
                                 .defaultAdvisors(new MessageChatMemoryAdvisor(new InMemoryChatMemory()),
@@ -69,6 +79,7 @@ public class ChatController {
                 this.vectorStore = vectorStore;
                 this.crawlerService = crawlerService;
                 this.webPageLoader = webPageLoader;
+                this.chatRepostory = chatRepostory;
         }
 
         @GetMapping("/")
@@ -173,5 +184,21 @@ public class ChatController {
                                                                                 System.lineSeparator())),
                                                                 "prompt", prompt)))
                                 .stream().content();
+        }
+
+        @PostMapping(value = "/saveConversation")
+        public ResponseEntity<Void> saveConversation(@RequestBody(required = true) ChatDetails chatDetails) {
+                chatRepostory.save(chatDetails);
+                return ResponseEntity.noContent().build();
+        }
+
+        @GetMapping(value = "/retrieveConversations")
+        public ResponseEntity<List<ChatDetails>> retrieveUserConversations(
+                        @AuthenticationPrincipal PortalUserDetails userDetails) {
+                List<ChatDetails> userChatDetails = chatRepostory.findAll().stream()
+                                .filter(chatDetails -> userDetails.getConversationIds()
+                                                .contains(chatDetails.getConversationId()))
+                                .toList();
+                return ResponseEntity.ok().body(userChatDetails);
         }
 }

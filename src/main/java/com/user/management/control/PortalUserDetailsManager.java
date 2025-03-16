@@ -1,10 +1,9 @@
 package com.user.management.control;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
-
-import javax.crypto.SecretKey;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -19,7 +18,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.user.management.control.exception.InvalidPasswordException;
 import com.user.management.control.exception.PasswordUsernameMatchException;
 import com.user.management.control.exception.SamePasswordException;
@@ -27,8 +25,6 @@ import com.user.management.control.exception.UserNotFoundException;
 import com.user.management.control.exception.UsernameAlreadyExistsException;
 import com.user.management.entity.PortalPermissions;
 import com.user.management.entity.PortalUserDetails;
-import com.user.management.entity.UserStatus;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,11 +46,6 @@ public class PortalUserDetailsManager implements UserDetailsService, UserDetails
     public PortalUserDetails findUserById(UUID id) {
         return userDetailsRepostory.findById(id)
                 .orElseThrow(throwIfUserNotFound("id", id));
-    }
-
-    public PortalUserDetails findUserByName(String name) {
-        return userDetailsRepostory.findByName(name)
-                .orElseThrow(throwIfUserNotFound("name", name));
     }
 
     public List<PortalUserDetails> findAllUsers() {
@@ -99,25 +90,14 @@ public class PortalUserDetailsManager implements UserDetailsService, UserDetails
         user.setName(user.getName().trim());
         user.setPassword(encodePassword(password));
         user.setPermissions(PortalPermissions.USER);
-        user.setStatus(UserStatus.ABSENT);
 
         userDetailsRepostory.save(user);
     }
 
-    public void updateSecretByUsername(PortalUserDetails userDetails, SecretKey secretKey) {
-        userDetails.setSecretKey(secretKey);
-        userDetailsRepostory.updateSecretByUsername(secretKey, userDetails.getUsername());
-    }
-
-    public void updateUserStatusById(UUID id, UserStatus status) {
-        PortalUserDetails userDetails = findUserById(id);
-        userDetails.setStatus(status);
-        userDetailsRepostory.save(userDetails);
-    }
-
-    public void updateUserStatusByName(String name, UserStatus status) {
-        PortalUserDetails userDetails = findUserByName(name);
-        userDetails.setStatus(status);
+    public void registerConversation(UUID conversationId, PortalUserDetails userDetails) {
+        var conversationIds = new ArrayList<>(userDetails.getConversationIds());
+        conversationIds.add(conversationId);
+        userDetails.setConversationIds(conversationIds);
         userDetailsRepostory.save(userDetails);
     }
 
@@ -130,8 +110,7 @@ public class PortalUserDetailsManager implements UserDetailsService, UserDetails
         if (!userDetails.getName().equals(oldName))
             throwIfUserNotFound("name", oldName);
 
-        userDetails.setName(newName);
-        userDetailsRepostory.save(userDetails);
+        userDetailsRepostory.updateNameByUsername(newName, userDetails.getUsername());
     }
 
     public boolean userExists(String username) {

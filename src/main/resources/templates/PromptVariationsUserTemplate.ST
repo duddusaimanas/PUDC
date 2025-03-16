@@ -1,5 +1,6 @@
 Please follow these instructions:
 - For the prompt provided in the PROMPT section, determine whether this prompt demands a web search.
+- Less verbose prompts don't demand a web search as it is time-consuming to parse the web.
 - Remember prompts that are conversational in nature that don't need much context can be determined as requiresWebSearch false.
 - Look for topics in the prompt that are specialized, very specific and less commonly known.
 - Look for words in the prompt that correlate with dynamic data.

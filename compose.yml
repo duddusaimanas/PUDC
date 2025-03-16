@@ -28,6 +28,16 @@ services:
     networks:
       - conn
 
+  redis-buffer:
+    image: redis:alpine
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+    command: redis-server
+    ports:
+      - "6379:6379"
+    networks:
+      - conn
+
   springboot-app:
     image: user-management:0.0.1-SNAPSHOT
     container_name: user-management
@@ -43,7 +53,23 @@ services:
       SPRING_AI_OLLAMA_BASE_URL: http://ollama-ai:11434/
       SPRING_AI_OLLAMA_CHAT_MODEL: llama3.2
       SPRING_THREADS_VIRTUAL_ENABLED: true
-      LOCAL_CRAWL_DIRECTORY: "/tmp/crawl/data/"
+      LOCAL_CRAWL_DIRECTORY: /tmp/crawl/data/
+      LOCAL_PDF_DIRECTORY: file:/pdf/docs/*
+      SPRING_DATA_REDIS_HOST: redis-buffer
+      SPRING_DATA_REDIS_PORT: 6379
+      KEY_CLEAN_CRON: 0 0 0 * * *
+      KEY_LOAD_CRON: 0 0 */3 * * *
+      KEY_ORCHESTRATION_TEST_MODE: false
+      KEY_ORCHESTRATION_IMMEDIATE_TIME_TO_LIVE: 3
+      KEY_ORCHESTRATION_IMMEDIATE_TIME_UNIT: HOURS
+      KEY_SESSION_TIME_TO_LIVE: 15
+      KEY_SESSION_TIME_UNIT: MINUTES
+      KEY_OVERALL_TIME_TO_LIVE: 30
+      KEY_OVERALL_TEMPORAL_UNIT: DAYS
+      JWT_REFRESH_TOKEN_TIME_TO_LIVE: 7
+      JWT_REFRESH_TEMPORAL_UNIT: DAYS
+      JWT_ACCESS_TOKEN_TIME_TO_LIVE: 15
+      JWT_ACCESS_TEMPORAL_UNIT: MINUTES
       SPRING_AI_OLLAMA_EMBEDDING_ENABLED: true
       SPRING_AI_OLLAMA_EMBEDDING_OPTIONS_MODEL: all-minilm
       SPRING_AI_VECTORSTORE_PGVECTOR_INDEX_TYPE: HNSW
@@ -54,12 +80,15 @@ services:
     ports:
       - "8080:8080"
     depends_on:
+      redis-buffer:
+        condition: service_healthy
       pg-db:
         condition: service_healthy
         restart: true
       ollama-ai:
         condition: service_started
     volumes:
+      - ./src/main/resources/docs:/pdf/docs
       - ./src/main/resources/import.sql:/docker-entrypoint-initdb.d/import.sql
     networks:
       - conn

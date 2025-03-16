@@ -8,7 +8,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.user.management.entity.PortalUserDetails;
+import com.user.management.control.PortalUserDetailsManager;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private final PortalUserDetailsManager userDetailsManager;
     private final JwtService jwtService;
 
     @Override
@@ -29,15 +30,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             final String token = authorizationHeader.substring(7);
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                final PortalUserDetails userDetails = jwtService.extractUserDetails(token);
+                final String username = jwtService.extractUsername(token);
+                var userDetails = userDetailsManager.loadUserByUsername(username);
                 if (jwtService.validateToken(token, userDetails)) {
-                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                    var authenticationToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 }
             }
         }
+        
         filterChain.doFilter(request, response);
     }
 

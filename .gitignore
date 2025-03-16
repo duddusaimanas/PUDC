@@ -37,4 +37,3 @@ ollama/
 
 **/src/main/resources/docs
 **/src/main/resources/META-INF
-**/src/main/resources/import.sql

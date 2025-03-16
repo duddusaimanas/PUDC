@@ -3,8 +3,6 @@ package com.user.management.control;
 import java.util.Optional;
 import java.util.UUID;
 
-import javax.crypto.SecretKey;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -25,8 +23,8 @@ public interface PortalUserDetailsRepostory extends JpaRepository<PortalUserDeta
     void updatePasswordByUsername(@Param("password") String password, @Param("username") String username);
 
     @Modifying
-    @Query("UPDATE PortalUserDetails user SET user.secretKey = :secretKey WHERE user.username = :username")
-    void updateSecretByUsername(@Param("secretKey") SecretKey secretKey, @Param("username") String username);
+    @Query("UPDATE PortalUserDetails user SET user.name = :newName WHERE user.username = :username")
+    void updateNameByUsername(@Param("newName") String newName, @Param("username") String username);
 
     boolean existsByUsername(String username);
 

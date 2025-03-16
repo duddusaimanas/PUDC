@@ -2,16 +2,19 @@ package com.user.management.entity;
 
 import java.util.UUID;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-public class PortalUserDetailsView {
+@NoArgsConstructor
+@AllArgsConstructor
+public class EnrolledDetails {
 
     private UUID id;
-    private String username;
     private String name;
     private UserStatus status;
-    private boolean isAdmin;
+
 }
